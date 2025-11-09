@@ -82,6 +82,13 @@ add_action('wp_enqueue_scripts', function(){
   flex-wrap: wrap;
   gap: 8px;
 }
+.dwd-card-route.layout-vertical {
+  flex-direction: column;
+  text-align: center;
+}
+.dwd-card-route.layout-vertical .dwd-card-route-icon {
+  margin: 0;
+}
 .dwd-card-route-text {
   font-size: 18px;
   font-weight: 600;
@@ -120,9 +127,23 @@ add_action('wp_enqueue_scripts', function(){
    CARD PRICE SECTION - HIZALAMA DÜZELTİLDİ
    ============================================ */
 .dwd-card-price-section {
-  display: block;
+  display: flex;
+  justify-content: center;
   margin-bottom: 20px;
   text-align: center;
+  width: 100%;
+}
+.dwd-card-price-section.align-center {
+  justify-content: center;
+  text-align: center;
+}
+.dwd-card-price-section.align-left {
+  justify-content: flex-start;
+  text-align: left;
+}
+.dwd-card-price-section.align-right {
+  justify-content: flex-end;
+  text-align: right;
 }
 
 .dwd-card-price-box {
@@ -660,6 +681,157 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
             }
             return $options;
         }
+		
+		private function allowed_icon_tags() {
+            return [
+                'i' => [
+                    'class' => [],
+                    'aria-hidden' => [],
+                    'data-icon' => [],
+                    'data-fa-i2svg' => [],
+                    'data-prefix' => [],
+                    'data-fa-transform' => [],
+                    'role' => [],
+                ],
+                'span' => [
+                    'class' => [],
+                    'aria-hidden' => [],
+                    'role' => [],
+                    'data-icon' => [],
+                ],
+                'svg' => [
+                    'class' => [],
+                    'xmlns' => [],
+                    'xmlns:xlink' => [],
+                    'viewBox' => [],
+                    'aria-hidden' => [],
+                    'aria-label' => [],
+                    'role' => [],
+                    'focusable' => [],
+                    'width' => [],
+                    'height' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                    'stroke-linecap' => [],
+                    'stroke-linejoin' => [],
+                    'stroke-dasharray' => [],
+                    'stroke-miterlimit' => [],
+                    'data-name' => [],
+                ],
+                'g' => [
+                    'class' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                    'stroke-linecap' => [],
+                    'stroke-linejoin' => [],
+                ],
+                'path' => [
+                    'd' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                    'stroke-linecap' => [],
+                    'stroke-linejoin' => [],
+                ],
+                'circle' => [
+                    'cx' => [],
+                    'cy' => [],
+                    'r' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                ],
+                'rect' => [
+                    'x' => [],
+                    'y' => [],
+                    'width' => [],
+                    'height' => [],
+                    'rx' => [],
+                    'ry' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                ],
+                'polygon' => [
+                    'points' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                ],
+                'polyline' => [
+                    'points' => [],
+                    'fill' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                    'stroke-linecap' => [],
+                    'stroke-linejoin' => [],
+                ],
+                'line' => [
+                    'x1' => [],
+                    'y1' => [],
+                    'x2' => [],
+                    'y2' => [],
+                    'stroke' => [],
+                    'stroke-width' => [],
+                    'stroke-linecap' => [],
+                ],
+                'use' => [
+                    'href' => [],
+                    'xlink:href' => [],
+                ],
+                'title' => [],
+                'img' => [
+                    'src' => [],
+                    'alt' => [],
+                    'class' => [],
+                    'loading' => [],
+                    'decoding' => [],
+                    'width' => [],
+                    'height' => [],
+                ],
+            ];
+        }
+
+        private function get_icon_markup($settings, $id, $default_html = '') {
+            $source = $settings[$id . '_source'] ?? '';
+            if (empty($source) && !empty($settings[$id])) {
+                return wp_kses($settings[$id], $this->allowed_icon_tags());
+            }
+
+            switch ($source) {
+                case 'svg':
+                    $media = $settings[$id . '_svg'] ?? [];
+                    if (!empty($media['url'])) {
+                        $url = esc_url($media['url']);
+                        if ($url) {
+                            return '<img src="' . $url . '" alt="" loading="lazy" />';
+                        }
+                    }
+                    break;
+                case 'html':
+                    $html = $settings[$id . '_html'] ?? $default_html;
+                    if (!empty($html)) {
+                        return wp_kses($html, $this->allowed_icon_tags());
+                    }
+                    break;
+                case 'picker':
+                default:
+                    $icon = $settings[$id . '_picker'] ?? [];
+                    if (!empty($icon['value'])) {
+                        ob_start();
+                        \Elementor\Icons_Manager::render_icon($icon, ['aria-hidden' => 'true']);
+                        return ob_get_clean();
+                    }
+            }
+
+            if (!empty($default_html)) {
+                return wp_kses($default_html, $this->allowed_icon_tags());
+            }
+
+            return '';
+        }
 
         protected function register_controls() {
             $routes = $this->get_routes();
@@ -733,11 +905,40 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 'default' => 'Abholort',
             ]);
 
-            $this->add_control('card_route_icon', [
-                'label' => __('Orta Icon HTML', 'dwd-transfer'),
+            $this->add_control('card_route_icon_source', [
+                'label' => __('Orta Icon Kaynağı', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'picker' => __('Sistem İkonu', 'dwd-transfer'),
+                    'svg' => __('SVG Yükle', 'dwd-transfer'),
+                    'html' => __('Özel Kod', 'dwd-transfer'),
+                ],
+                'default' => 'picker',
+            ]);
+
+            $this->add_control('card_route_icon_picker', [
+                'label' => __('Orta Icon', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::ICONS,
+                'default' => [
+                    'value' => 'fas fa-arrow-right',
+                    'library' => 'fa-solid',
+                ],
+                'condition' => ['card_route_icon_source' => 'picker'],
+            ]);
+
+            $this->add_control('card_route_icon_svg', [
+                'label' => __('SVG Yükle', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::MEDIA,
+                'media_types' => ['svg'],
+                'condition' => ['card_route_icon_source' => 'svg'],
+            ]);
+
+            $this->add_control('card_route_icon_html', [
+                'label' => __('Özel Icon HTML', 'dwd-transfer'),
                 'type' => \Elementor\Controls_Manager::TEXTAREA,
                 'default' => '<i class="fa-solid fa-arrow-right"></i>',
                 'rows' => 2,
+				'condition' => ['card_route_icon_source' => 'html'],
             ]);
 
             $this->add_control('card_route_text_end', [
@@ -745,19 +946,97 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 'type' => \Elementor\Controls_Manager::TEXT,
                 'default' => 'Zielort',
             ]);
+			
+			$this->add_control('card_route_layout', [
+                'label' => __('Güzergah Yerleşimi', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'horizontal' => __('Yatay', 'dwd-transfer'),
+                    'vertical' => __('Dikey (Alt Alta)', 'dwd-transfer'),
+                ],
+                'default' => 'horizontal',
+            ]);
 
-            $this->add_control('card_km_icon', [
-                'label' => __('KM Icon HTML', 'dwd-transfer'),
+            $this->add_control('card_route_layout', [
+                'label' => __('Güzergah Yerleşimi', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'horizontal' => __('Yatay', 'dwd-transfer'),
+                    'vertical' => __('Dikey (Alt Alta)', 'dwd-transfer'),
+                ],
+                'default' => 'horizontal',
+            ]);
+
+            $this->add_control('card_km_icon_source', [
+                'label' => __('KM Icon Kaynağı', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'picker' => __('Sistem İkonu', 'dwd-transfer'),
+                    'svg' => __('SVG Yükle', 'dwd-transfer'),
+                    'html' => __('Özel Kod', 'dwd-transfer'),
+                ],
+                'default' => 'picker',
+            ]);
+
+            $this->add_control('card_km_icon_picker', [
+                'label' => __('KM Icon', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::ICONS,
+                'default' => [
+                    'value' => 'fas fa-route',
+                    'library' => 'fa-solid',
+                ],
+                'condition' => ['card_km_icon_source' => 'picker'],
+            ]);
+
+            $this->add_control('card_km_icon_svg', [
+                'label' => __('SVG Yükle', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::MEDIA,
+                'media_types' => ['svg'],
+                'condition' => ['card_km_icon_source' => 'svg'],
+            ]);
+
+            $this->add_control('card_km_icon_html', [
+                'label' => __('Özel Icon HTML', 'dwd-transfer'),
                 'type' => \Elementor\Controls_Manager::TEXTAREA,
                 'default' => '<i class="fa-solid fa-route"></i>',
                 'rows' => 2,
+				'condition' => ['card_km_icon_source' => 'html'],
             ]);
 
-            $this->add_control('card_time_icon', [
-                'label' => __('Süre Icon HTML', 'dwd-transfer'),
+            $this->add_control('card_time_icon_source', [
+                'label' => __('Süre Icon Kaynağı', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'picker' => __('Sistem İkonu', 'dwd-transfer'),
+                    'svg' => __('SVG Yükle', 'dwd-transfer'),
+                    'html' => __('Özel Kod', 'dwd-transfer'),
+                ],
+                'default' => 'picker',
+            ]);
+
+            $this->add_control('card_time_icon_picker', [
+                'label' => __('Süre Icon', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::ICONS,
+                'default' => [
+                    'value' => 'fas fa-clock',
+                    'library' => 'fa-solid',
+                ],
+                'condition' => ['card_time_icon_source' => 'picker'],
+            ]);
+
+            $this->add_control('card_time_icon_svg', [
+                'label' => __('SVG Yükle', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::MEDIA,
+                'media_types' => ['svg'],
+                'condition' => ['card_time_icon_source' => 'svg'],
+            ]);
+
+            $this->add_control('card_time_icon_html', [
+                'label' => __('Özel Icon HTML', 'dwd-transfer'),
                 'type' => \Elementor\Controls_Manager::TEXTAREA,
                 'default' => '<i class="fa-solid fa-clock"></i>',
                 'rows' => 2,
+				'condition' => ['card_time_icon_source' => 'html'],
             ]);
 
             $this->add_control('card_price_label', [
@@ -1225,11 +1504,40 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 'condition' => ['view_type' => 'button']
             ]);
 
-            $this->add_control('button_row1_icon', [
-                'label' => __('1. Satır - Icon', 'dwd-transfer'),
+            $this->add_control('button_row1_icon_source', [
+                'label' => __('1. Satır Icon Kaynağı', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'picker' => __('Sistem İkonu', 'dwd-transfer'),
+                    'svg' => __('SVG Yükle', 'dwd-transfer'),
+                    'html' => __('Özel Kod', 'dwd-transfer'),
+                ],
+                'default' => 'picker',
+            ]);
+
+            $this->add_control('button_row1_icon_picker', [
+                'label' => __('1. Satır Icon', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::ICONS,
+                'default' => [
+                    'value' => 'fas fa-calendar',
+                    'library' => 'fa-solid',
+                ],
+                'condition' => ['button_row1_icon_source' => 'picker'],
+            ]);
+
+            $this->add_control('button_row1_icon_svg', [
+                'label' => __('SVG Yükle', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::MEDIA,
+                'media_types' => ['svg'],
+                'condition' => ['button_row1_icon_source' => 'svg'],
+            ]);
+
+            $this->add_control('button_row1_icon_html', [
+                'label' => __('Özel Icon HTML', 'dwd-transfer'),
                 'type' => \Elementor\Controls_Manager::TEXTAREA,
                 'default' => '<i class="fa-solid fa-calendar"></i>',
                 'rows' => 2,
+				'condition' => ['button_row1_icon_source' => 'html'],
             ]);
 
             $this->add_control('button_row1_text', [
@@ -1238,11 +1546,40 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 'default' => 'icon + text',
             ]);
 
-            $this->add_control('button_row2_icon', [
-                'label' => __('2. Satır - Icon', 'dwd-transfer'),
+            $this->add_control('button_row2_icon_source', [
+                'label' => __('2. Satır Icon Kaynağı', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'picker' => __('Sistem İkonu', 'dwd-transfer'),
+                    'svg' => __('SVG Yükle', 'dwd-transfer'),
+                    'html' => __('Özel Kod', 'dwd-transfer'),
+                ],
+                'default' => 'picker',
+            ]);
+
+            $this->add_control('button_row2_icon_picker', [
+                'label' => __('2. Satır Icon', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::ICONS,
+                'default' => [
+                    'value' => 'fas fa-clock',
+                    'library' => 'fa-solid',
+                ],
+                'condition' => ['button_row2_icon_source' => 'picker'],
+            ]);
+
+            $this->add_control('button_row2_icon_svg', [
+                'label' => __('SVG Yükle', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::MEDIA,
+                'media_types' => ['svg'],
+                'condition' => ['button_row2_icon_source' => 'svg'],
+            ]);
+
+            $this->add_control('button_row2_icon_html', [
+                'label' => __('Özel Icon HTML', 'dwd-transfer'),
                 'type' => \Elementor\Controls_Manager::TEXTAREA,
                 'default' => '<i class="fa-solid fa-clock"></i>',
                 'rows' => 2,
+				'condition' => ['button_row2_icon_source' => 'html'],
             ]);
 
             $this->add_control('button_row2_text', [
@@ -1251,11 +1588,40 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 'default' => 'icon + text',
             ]);
 
-            $this->add_control('button_arrow_icon', [
-                'label' => __('Arrow Icon', 'dwd-transfer'),
+            $this->add_control('button_arrow_icon_source', [
+                'label' => __('Ok Icon Kaynağı', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::SELECT,
+                'options' => [
+                    'picker' => __('Sistem İkonu', 'dwd-transfer'),
+                    'svg' => __('SVG Yükle', 'dwd-transfer'),
+                    'html' => __('Özel Kod', 'dwd-transfer'),
+                ],
+                'default' => 'picker',
+            ]);
+
+            $this->add_control('button_arrow_icon_picker', [
+                'label' => __('Ok Icon', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::ICONS,
+                'default' => [
+                    'value' => 'fas fa-arrow-right',
+                    'library' => 'fa-solid',
+                ],
+                'condition' => ['button_arrow_icon_source' => 'picker'],
+            ]);
+
+            $this->add_control('button_arrow_icon_svg', [
+                'label' => __('SVG Yükle', 'dwd-transfer'),
+                'type' => \Elementor\Controls_Manager::MEDIA,
+                'media_types' => ['svg'],
+                'condition' => ['button_arrow_icon_source' => 'svg'],
+            ]);
+
+            $this->add_control('button_arrow_icon_html', [
+                'label' => __('Özel Icon HTML', 'dwd-transfer'),
                 'type' => \Elementor\Controls_Manager::TEXTAREA,
                 'default' => '<i class="fa-solid fa-arrow-right"></i>',
                 'rows' => 2,
+				'condition' => ['button_arrow_icon_source' => 'html'],
             ]);
 
             $this->end_controls_section();
@@ -1542,26 +1908,35 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 }
                 
                 // Route
-                echo '<div class="dwd-card-route">';
-                echo '<span class="dwd-card-route-text">'.esc_html($s['card_route_text_start'] ?? $start).'</span>';
-                echo '<span class="dwd-card-route-icon">'.($s['card_route_icon'] ?? '').'</span>';
-                echo '<span class="dwd-card-route-text">'.esc_html($s['card_route_text_end'] ?? $end).'</span>';
+                $route_class = 'dwd-card-route';
+                if (isset($s['card_route_layout']) && $s['card_route_layout'] === 'vertical') {
+                    $route_class .= ' layout-vertical';
+                }
+                echo '<div class="' . esc_attr($route_class) . '">';
+                echo '<span class="dwd-card-route-text">' . esc_html($s['card_route_text_start'] ?? $start) . '</span>';
+                $route_icon = $this->get_icon_markup($s, 'card_route_icon', '<i class="fa-solid fa-arrow-right"></i>');
+                echo '<span class="dwd-card-route-icon">' . $route_icon . '</span>';
+                echo '<span class="dwd-card-route-text">' . esc_html($s['card_route_text_end'] ?? $end) . '</span>';
                 echo '</div>';
                 
                 // Stats
                 echo '<div class="dwd-card-stats">';
                 echo '<div class="dwd-card-stat-item">';
-                echo '<span class="dwd-card-stat-icon">'.($s['card_km_icon'] ?? '').'</span>';
-                echo '<span class="dwd-card-stat-text">'.$km_formatted.'</span>';
+                $km_icon = $this->get_icon_markup($s, 'card_km_icon', '<i class="fa-solid fa-route"></i>');
+                echo '<span class="dwd-card-stat-icon">' . $km_icon . '</span>';
+                echo '<span class="dwd-card-stat-text">' . $km_formatted . '</span>';
                 echo '</div>';
                 echo '<div class="dwd-card-stat-item">';
-                echo '<span class="dwd-card-stat-icon">'.($s['card_time_icon'] ?? '').'</span>';
-                echo '<span class="dwd-card-stat-text">'.$sure_formatted.'</span>';
+                $time_icon = $this->get_icon_markup($s, 'card_time_icon', '<i class="fa-solid fa-clock"></i>');
+                echo '<span class="dwd-card-stat-icon">' . $time_icon . '</span>';
+                echo '<span class="dwd-card-stat-text">' . $sure_formatted . '</span>';
                 echo '</div>';
                 echo '</div>';
                 
                 // Price
-                echo '<div class="dwd-card-price-section">';
+                $price_align = in_array($s['price_section_align'] ?? 'center', ['left', 'center', 'right'], true) ? $s['price_section_align'] : 'center';
+                $price_section_class = 'dwd-card-price-section align-' . $price_align;
+                echo '<div class="'.esc_attr($price_section_class).'">';
                 echo '<div class="dwd-card-price-box">';
                 echo '<div class="dwd-card-price-label">'.esc_html($s['card_price_label'] ?? 'AB').'</div>';
                 echo '<div class="dwd-card-price-value">';
@@ -1581,15 +1956,18 @@ add_action('elementor/widgets/widgets_registered', function($widgets_manager){
                 echo '<a href="'.esc_url($raw_link).'" class="dwd-button-wrapper'.$editor_class.'" data-modal-link="'.esc_url($raw_link).'" data-modal-bg="'.$modal_bg.'" data-modal-full="'.$modal_full.'" data-modal-width="'.$modal_w.'" data-modal-height="'.$modal_h.'">';
                 echo '<div class="dwd-button-content">';
                 echo '<div class="dwd-button-row">';
-                echo '<span class="dwd-button-row-icon">'.($s['button_row1_icon'] ?? '').'</span>';
+                $button_row1_icon = $this->get_icon_markup($s, 'button_row1_icon', '<i class="fa-solid fa-calendar"></i>');
+                echo '<span class="dwd-button-row-icon">'.$button_row1_icon.'</span>';
                 echo '<span class="dwd-button-row-text">'.esc_html($s['button_row1_text'] ?? '').'</span>';
                 echo '</div>';
                 echo '<div class="dwd-button-row">';
-                echo '<span class="dwd-button-row-icon">'.($s['button_row2_icon'] ?? '').'</span>';
+                $button_row2_icon = $this->get_icon_markup($s, 'button_row2_icon', '<i class="fa-solid fa-clock"></i>');
+                echo '<span class="dwd-button-row-icon">'.$button_row2_icon.'</span>';
                 echo '<span class="dwd-button-row-text">'.esc_html($s['button_row2_text'] ?? '').'</span>';
                 echo '</div>';
                 echo '</div>';
-                echo '<div class="dwd-button-arrow">'.($s['button_arrow_icon'] ?? '').'</div>';
+                $button_arrow_icon = $this->get_icon_markup($s, 'button_arrow_icon', '<i class="fa-solid fa-arrow-right"></i>');
+                echo '<div class="dwd-button-arrow">'.$button_arrow_icon.'</div>';
                 echo '</a>';
                 echo '<div class="dwd-link-preview">'.esc_html($raw_link).'</div>';
             }
